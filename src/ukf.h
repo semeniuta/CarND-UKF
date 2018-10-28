@@ -53,7 +53,7 @@ public:
   double std_radphi_;
 
   ///* Radar measurement noise standard deviation radius change in m/s
-  double std_radrd_ ;
+  double std_radrd_;
 
   ///* Weights of sigma points
   VectorXd weights_;
@@ -76,7 +76,7 @@ public:
   /**
    * Destructor
    */
-  virtual ~UKF();
+  virtual ~UKF() = default;
 
   /**
    * ProcessMeasurement
