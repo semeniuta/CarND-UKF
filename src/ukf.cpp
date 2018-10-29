@@ -12,22 +12,33 @@ using std::vector;
  * This is scaffolding, do not modify
  */
 UKF::UKF() {
+
+  is_initialized_ = false;
+
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
 
+  n_x_ = 5;
+
+  n_aug_ = n_x_ + 2;
+
+  lambda_ = 3 - n_aug_;
+
   // initial state vector
-  x_ = VectorXd(5);
+  x_ = VectorXd(n_x_);
 
   // initial covariance matrix
-  P_ = MatrixXd(5, 5);
+  P_ = MatrixXd(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
+  // TODO Tune this parameter
   std_a_ = 30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
+  // TODO Tune this parameter
   std_yawdd_ = 30;
 
   //DO NOT MODIFY measurement noise values below these are provided by the sensor manufacturer.
@@ -47,13 +58,10 @@ UKF::UKF() {
   std_radrd_ = 0.3;
   //DO NOT MODIFY measurement noise values above these are provided by the sensor manufacturer.
 
-  /**
-  TODO:
+  Xsig_pred_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
 
-  Complete the initialization. See ukf.h for other member properties.
+  weights_ = VectorXd(2 * n_aug_ + 1);
 
-  Hint: one or more values initialized above might be wildly off...
-  */
 }
 
 /**
