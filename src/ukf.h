@@ -107,6 +107,8 @@ private:
 
   long long previous_timestamp_;
 
+  MatrixXd GenerateSigmaPoints();
+
 };
 
 #endif /* UKF_H */
