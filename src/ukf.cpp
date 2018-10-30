@@ -68,13 +68,66 @@ UKF::UKF() {
  * @param {MeasurementPackage} meas_package The latest measurement data of
  * either radar or laser.
  */
-void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
+void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
   /**
   TODO:
 
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+
+  if (!is_initialized_) {
+
+    previous_timestamp_ = meas_package.timestamp_;
+    x_.fill(0.);
+
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+
+      double rho = meas_package.raw_measurements_[0];
+      double phi = meas_package.raw_measurements_[1];
+
+      x_(0) = rho * cos(phi);
+      x_(1) = rho * sin(phi);
+
+    } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+
+      x_(0) = meas_package.raw_measurements_[0];
+      x_(1) = meas_package.raw_measurements_[1];
+
+    }
+
+    P_.fill(0.);
+    P_(0, 0) = 1;
+    P_(1, 1) = 1;
+    P_(2, 2) = 1000;
+    P_(3, 3) = 1000;
+    P_(4, 4) = 1000;
+
+    is_initialized_ = true;
+
+    return;
+  }
+
+  double dt = (meas_package.timestamp_ - previous_timestamp_) / 1e6;
+  previous_timestamp_ = meas_package.timestamp_;
+
+  Prediction(dt);
+
+  switch (meas_package.sensor_type_) {
+
+    case MeasurementPackage::RADAR:
+
+      // TODO Maybe data members preparation
+      UpdateRadar(meas_package);
+      break;
+
+    case MeasurementPackage::LASER:
+
+      // TODO Maybe data members preparation
+      UpdateLidar(meas_package);
+      break;
+  }
+
 }
 
 /**
@@ -95,7 +148,7 @@ void UKF::Prediction(double delta_t) {
  * Updates the state and the state covariance matrix using a laser measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateLidar(MeasurementPackage meas_package) {
+void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
   /**
   TODO:
 
@@ -110,7 +163,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  * Updates the state and the state covariance matrix using a radar measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateRadar(MeasurementPackage meas_package) {
+void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   /**
   TODO:
 
