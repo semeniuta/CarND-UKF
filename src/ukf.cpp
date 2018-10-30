@@ -145,7 +145,7 @@ void UKF::Prediction(double delta_t) {
 
   MatrixXd Xsig_aug = GenerateSigmaPoints();
 
-  // TODO Xsig_pred_ = Predict sigma points ...
+  PredictSigmaPoints(Xsig_aug, delta_t);
 
   // TODO Predict x_ and P_ from Xsig_pred_
 
@@ -208,4 +208,51 @@ MatrixXd UKF::GenerateSigmaPoints() {
 
   return Xsig_aug;
 
+}
+
+void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) { // modifies Xsig_pred_
+
+  VectorXd Delta{n_x_};
+  VectorXd Noise{n_x_};
+
+  for (unsigned int j = 0; j < 2 * n_aug_ + 1; j++) {
+
+    double v = Xsig_aug(2, j);
+    double psi = Xsig_aug(3, j);
+    double psi_dot = Xsig_aug(4, j);
+    double noise_a = Xsig_aug(5, j);
+    double noise_yawdd = Xsig_aug(6, j);
+
+    if (fabs(psi_dot) > 0.001) {
+
+      double ratio = v / psi_dot;
+      double psi_increase = psi_dot * delta_t;
+
+      Delta(0) = ratio * ( sin(psi + psi_increase) - sin(psi));
+      Delta(1) = ratio * (-cos(psi + psi_increase) + cos(psi));
+      Delta(2) = 0;
+      Delta(3) = psi_increase;
+      Delta(4) = 0;
+
+    } else { // psi_dot is close to 0
+
+      Delta(0) = v * cos(psi) * delta_t;
+      Delta(1) = v * sin(psi) * delta_t;
+      Delta(2) = 0;
+      Delta(3) = 0;
+      Delta(4) = 0;
+
+    }
+
+    double delta_t_sq = delta_t * delta_t;
+
+    Noise(0) = 0.5 * delta_t_sq * cos(psi) * noise_a;
+    Noise(1) = 0.5 * delta_t_sq * sin(psi) * noise_a;
+    Noise(2) = delta_t * noise_a;
+    Noise(3) = 0.5 * delta_t_sq * noise_yawdd;
+    Noise(4) = delta_t * noise_yawdd;
+
+    Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise;
+
+  }
 }

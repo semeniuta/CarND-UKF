@@ -108,7 +108,9 @@ private:
   long long previous_timestamp_;
 
   MatrixXd GenerateSigmaPoints();
+  void PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t);
 
-};
+
+  };
 
 #endif /* UKF_H */
