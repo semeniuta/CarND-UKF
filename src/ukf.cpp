@@ -61,6 +61,7 @@ UKF::UKF() {
   Xsig_pred_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
 
   weights_ = VectorXd(2 * n_aug_ + 1);
+  InitWeights();
 
 }
 
@@ -144,10 +145,9 @@ void UKF::Prediction(double delta_t) {
   */
 
   MatrixXd Xsig_aug = GenerateSigmaPoints();
-
   PredictSigmaPoints(Xsig_aug, delta_t);
 
-  // TODO Predict x_ and P_ from Xsig_pred_
+  MeanCovFromSigmaPoints();
 
 }
 
@@ -179,6 +179,76 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
 
   You'll also need to calculate the radar NIS.
   */
+
+  int n_z = 3; // r, phi, r_dot
+
+  MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
+
+  // Mean predicted measurement
+  VectorXd z_pred = VectorXd(n_z);
+
+  // Measurement covariance matrix S
+  MatrixXd S = MatrixXd(n_z, n_z);
+
+  // Transform sigma points into measurement space
+
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+
+    double px = Xsig_pred_(0, i);
+    double py = Xsig_pred_(1, i);
+    double v = Xsig_pred_(2, i);
+    double yaw = Xsig_pred_(3, i);
+
+    double rho = sqrt( px * px + py * py );
+    double phi = atan2(py, px);
+    double rhod = (px * cos(yaw) * v + py * sin(yaw) * v) / rho;
+
+    Zsig(0, i) = rho;
+    Zsig(1, i) = phi;
+    Zsig(2, i) = rhod;
+
+  }
+
+  // Calculate mean predicted measurement
+
+  z_pred.fill(0.0);
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+
+    z_pred += weights_(i) * Zsig.col(i);
+  }
+
+  // Calculate innovation covariance matrix S
+
+  MatrixXd R{3, 3};
+  R.fill(0.0);
+  R(0, 0) = std_radr_ * std_radr_;
+  R(1, 1) = std_radphi_ * std_radphi_;
+  R(2, 2) = std_radrd_ * std_radrd_;
+
+  S.fill(0.0);
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+
+    VectorXd diff = Zsig.col(i) - z_pred;
+    NormalizeAngle(&diff, 1);
+
+    S += weights_(i) * (diff * diff.transpose());
+  }
+
+  S += R;
+
+  Update(S, Zsig, meas_package.raw_measurements_, z_pred, n_z);
+
+}
+
+void UKF::InitWeights() {
+
+  weights_(0) = lambda_ / (lambda_ + n_aug_);
+
+  double w_not_mean = 1 / (2 * (lambda_ + n_aug_));
+  for (unsigned int i = 1; i < 2 * n_aug_ + 1; i++) {
+    weights_(i) = w_not_mean;
+  }
+
 }
 
 MatrixXd UKF::GenerateSigmaPoints() {
@@ -255,4 +325,68 @@ void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) { // modi
     Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise;
 
   }
+}
+
+void UKF::MeanCovFromSigmaPoints() {
+
+  //predict state mean
+
+  x_.fill(0.0);
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+    x_ += weights_(i) * Xsig_pred_.col(i);
+  }
+
+  //predict state covariance matrix
+
+  P_.fill(0.0);
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+
+    VectorXd mean_diff = Xsig_pred_.col(i) - x_;
+    NormalizeAngle(&mean_diff, 3);
+
+    P_ += weights_(i) * (mean_diff * mean_diff.transpose());
+  }
+
+}
+
+void UKF::Update(const MatrixXd& S, const MatrixXd& Zsig, const VectorXd& z, const VectorXd& z_pred, int n_z) {
+
+  // Cross correlation matrix
+
+  MatrixXd Tc = MatrixXd(n_x_, n_z);
+
+  //calculate cross correlation matrix
+
+  Tc.fill(0.0);
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+
+    VectorXd diff_x = Xsig_pred_.col(i) - x_;
+    NormalizeAngle(&diff_x, 3); // new
+
+    VectorXd diff_z = Zsig.col(i) - z_pred;
+    NormalizeAngle(&diff_z, 1);
+
+    Tc += weights_(i) * diff_x * diff_z.transpose();
+  }
+
+  // Kalman gain
+
+  MatrixXd K = Tc * S.inverse();
+
+  // Update state mean and covariance matrix
+
+  x_ += K * (z - z_pred);
+  P_ -= K * S * K.transpose();
+
+}
+
+void NormalizeAngle(VectorXd* p_vec, int idx) {
+
+  double x = (*p_vec)(idx);
+
+  while (x >  M_PI) x -= 2.*M_PI;
+  while (x < -M_PI) x += 2.*M_PI;
+
+  (*p_vec)(idx) = x;
+
 }

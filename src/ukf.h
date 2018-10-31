@@ -10,6 +10,8 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
+void NormalizeAngle(VectorXd* p_vec, int idx);
+
 class UKF {
 public:
 
@@ -107,8 +109,11 @@ private:
 
   long long previous_timestamp_;
 
+  void InitWeights();
   MatrixXd GenerateSigmaPoints();
   void PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t);
+  void MeanCovFromSigmaPoints();
+  void Update(const MatrixXd& S, const MatrixXd& Zsig, const VectorXd& z, const VectorXd& z_pred, int n_z);
 
 
   };
