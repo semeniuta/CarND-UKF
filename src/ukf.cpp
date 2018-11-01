@@ -63,6 +63,10 @@ UKF::UKF() {
   weights_ = VectorXd(2 * n_aug_ + 1);
   InitWeights();
 
+  H_lidar_ = MatrixXd{2, 5};
+  H_lidar_ << 1, 0, 0, 0, 0,
+              0, 1, 0, 0, 0;
+
 }
 
 /**
@@ -164,6 +168,30 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
+
+  VectorXd z_pred = H_lidar_ * x_;
+
+  VectorXd y = meas_package.raw_measurements_ - z_pred;
+
+  NormalizeAngle(&y, 1);
+
+  MatrixXd Ht = H_lidar_.transpose();
+  MatrixXd R{2, 2};
+  R.fill(0.0);
+  R(0, 0) = std_laspx_ * std_laspx_;
+  R(1, 1) = std_laspy_ * std_laspy_;
+
+  MatrixXd S = H_lidar_ * P_ * Ht + R;
+
+  // TODO Given PHt (Tc), the latter parts should be common
+
+  MatrixXd PHt = P_ * Ht;
+  MatrixXd K = PHt * S.inverse();
+
+  x_ = x_ + (K * y);
+  MatrixXd I = MatrixXd::Identity(n_x_, n_x_);
+  P_ = (I - K * H_lidar_) * P_;
+
 }
 
 /**
@@ -322,7 +350,7 @@ void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) { // modi
     Noise(3) = 0.5 * delta_t_sq * noise_yawdd;
     Noise(4) = delta_t * noise_yawdd;
 
-    Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise;
+    Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise; // TODO Some problem here
 
   }
 }

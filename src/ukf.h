@@ -108,6 +108,7 @@ public:
 private:
 
   long long previous_timestamp_;
+  MatrixXd H_lidar_;
 
   void InitWeights();
   MatrixXd GenerateSigmaPoints();
