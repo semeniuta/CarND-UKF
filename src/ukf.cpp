@@ -58,7 +58,7 @@ UKF::UKF() {
   std_radrd_ = 0.3;
   //DO NOT MODIFY measurement noise values above these are provided by the sensor manufacturer.
 
-  Xsig_pred_ = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+  Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
   weights_ = VectorXd(2 * n_aug_ + 1);
   InitWeights();
@@ -173,7 +173,8 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
 
   VectorXd y = meas_package.raw_measurements_ - z_pred;
 
-  NormalizeAngle(&y, 1);
+  //NormalizeAngle(&y, 1);
+  y(1) = normalize_phi(y(1));
 
   MatrixXd Ht = H_lidar_.transpose();
   MatrixXd R{2, 2};
@@ -257,7 +258,8 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd diff = Zsig.col(i) - z_pred;
-    NormalizeAngle(&diff, 1);
+    //NormalizeAngle(&diff, 1);
+    diff(1) = normalize_phi(diff(1));
 
     S += weights_(i) * (diff * diff.transpose());
   }
@@ -350,7 +352,7 @@ void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) { // modi
     Noise(3) = 0.5 * delta_t_sq * noise_yawdd;
     Noise(4) = delta_t * noise_yawdd;
 
-    Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise; // TODO Some problem here
+    Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise;
 
   }
 }
@@ -370,7 +372,8 @@ void UKF::MeanCovFromSigmaPoints() {
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd mean_diff = Xsig_pred_.col(i) - x_;
-    NormalizeAngle(&mean_diff, 3);
+    //NormalizeAngle(&mean_diff, 3);
+    mean_diff(3) = normalize_phi(mean_diff(3));
 
     P_ += weights_(i) * (mean_diff * mean_diff.transpose());
   }
@@ -389,10 +392,12 @@ void UKF::Update(const MatrixXd& S, const MatrixXd& Zsig, const VectorXd& z, con
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd diff_x = Xsig_pred_.col(i) - x_;
-    NormalizeAngle(&diff_x, 3); // new
+    //NormalizeAngle(&diff_x, 3); // new
+    diff_x(3) = normalize_phi(diff_x(3));
 
     VectorXd diff_z = Zsig.col(i) - z_pred;
-    NormalizeAngle(&diff_z, 1);
+    //NormalizeAngle(&diff_z, 1);
+    diff_z(1) = normalize_phi(diff_z(1));
 
     Tc += weights_(i) * diff_x * diff_z.transpose();
   }
@@ -418,3 +423,30 @@ void NormalizeAngle(VectorXd* p_vec, int idx) {
   (*p_vec)(idx) = x;
 
 }
+
+
+double normalize_phi(double phi) {
+
+  if ((phi > -M_PI) && (phi < M_PI)) {
+    return phi;
+  }
+
+  double TWO_PI = 2 * M_PI;
+  double n_twopies = (abs(phi) - M_PI) / TWO_PI;
+
+  double phi_norm;
+
+  if (phi < -M_PI) {
+
+    phi_norm = phi + ceil(n_twopies) * TWO_PI;
+
+  } else  { // phi > M_PI
+
+    phi_norm = phi - ceil(n_twopies) * TWO_PI;
+
+  }
+
+  return phi_norm;
+
+}
+

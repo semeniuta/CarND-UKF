@@ -11,6 +11,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 void NormalizeAngle(VectorXd* p_vec, int idx);
+double normalize_phi(double phi);
 
 class UKF {
 public:
