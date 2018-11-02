@@ -10,7 +10,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd>& estimations,
                               const vector<VectorXd>& ground_truth) {
 
   VectorXd result(4);
-  result << 0,0,0,0;
+  result.fill(0.0);
 
   if (estimations.empty()) {
     cerr << "Empty estimations vector\n";
@@ -26,7 +26,20 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd>& estimations,
 
   for(int i = 0; i < n; i++){
 
-    VectorXd x_hat = estimations[i];
+    VectorXd x_CTRV = estimations[i];
+
+    VectorXd x_hat{4};
+
+    double px = x_CTRV(0);
+    double py = x_CTRV(1);
+    double v = x_CTRV(2);
+    double yaw = x_CTRV(3);
+
+    x_hat << px,
+             py,
+             v * cos(yaw),
+             v * sin(yaw);
+
     VectorXd x_true = ground_truth[i];
 
     VectorXd diff = x_hat - x_true;
