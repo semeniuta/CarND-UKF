@@ -26,20 +26,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd>& estimations,
 
   for(int i = 0; i < n; i++){
 
-    VectorXd x_CTRV = estimations[i];
-
-    VectorXd x_hat{4};
-
-    double px = x_CTRV(0);
-    double py = x_CTRV(1);
-    double v = x_CTRV(2);
-    double yaw = x_CTRV(3);
-
-    x_hat << px,
-             py,
-             v * cos(yaw),
-             v * sin(yaw);
-
+    VectorXd x_hat = CTRVTransform(estimations[i]);
     VectorXd x_true = ground_truth[i];
 
     VectorXd diff = x_hat - x_true;
@@ -53,5 +40,24 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd>& estimations,
   result = result.array().sqrt();
 
   return result;
+
+}
+
+
+VectorXd Tools::CTRVTransform(const VectorXd& x_CTRV) {
+
+  VectorXd x_hat{4};
+
+  double px = x_CTRV(0);
+  double py = x_CTRV(1);
+  double v = x_CTRV(2);
+  double yaw = x_CTRV(3);
+
+  x_hat << px,
+           py,
+           v * cos(yaw),
+           v * sin(yaw);
+
+  return x_hat;
 
 }

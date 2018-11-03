@@ -25,6 +25,8 @@ public:
   */
   VectorXd CalculateRMSE(const vector<VectorXd>& estimations, const vector<VectorXd>& ground_truth);
 
+  VectorXd CTRVTransform(const VectorXd& x_CTRV);
+
 };
 
 #endif /* TOOLS_H_ */

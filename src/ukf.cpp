@@ -1,4 +1,5 @@
 #include "ukf.h"
+#include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
 
@@ -81,6 +82,9 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
   measurements.
   */
 
+  Tools tools;
+  VectorXd x_hat;
+
   if (!is_initialized_) {
 
     previous_timestamp_ = meas_package.timestamp_;
@@ -108,6 +112,9 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
     P_(3, 3) = 1000;
     P_(4, 4) = 1000;
 
+    x_hat = tools.CTRVTransform(x_);
+    cout << "x_hat (init) = \n" << x_hat << "\n";
+
     is_initialized_ = true;
 
     return;
@@ -117,10 +124,17 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
   previous_timestamp_ = meas_package.timestamp_;
 
   Prediction(dt);
+  //NormalizeAnglesInState();
+
+  cout << "x_CTRV (after prediction) = \n" << x_ << "\n";
+  x_hat = tools.CTRVTransform(x_);
+  cout << "x_hat (predict) = \n" << x_hat << "\n";
 
   switch (meas_package.sensor_type_) {
 
     case MeasurementPackage::RADAR:
+
+      std::cout << "Updating (RADAR)\n";
 
       // TODO Maybe data members preparation
       UpdateRadar(meas_package);
@@ -128,10 +142,18 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
 
     case MeasurementPackage::LASER:
 
+      std::cout << "Updating (LIDAR)\n";
+
       // TODO Maybe data members preparation
       UpdateLidar(meas_package);
       break;
   }
+
+  //NormalizeAnglesInState();
+
+  cout << "x_CTRV (after update) = \n" << x_ << "\n";
+  x_hat = tools.CTRVTransform(x_);
+  cout << "x_hat (update) = \n" << x_hat << "\n";
 
 }
 
@@ -401,6 +423,13 @@ void UKF::MeanCovFromSigmaPoints() {
 
     P_ += weights_(i) * (mean_diff * mean_diff.transpose());
   }
+
+}
+
+void UKF::NormalizeAnglesInState() {
+
+  x_(3) = normalize_angle(x_(3)); // yaw
+  x_(4) = normalize_angle(x_(4)); // yaw rate
 
 }
 

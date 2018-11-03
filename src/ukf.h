@@ -114,7 +114,7 @@ private:
   MatrixXd GenerateSigmaPoints();
   void PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t);
   void MeanCovFromSigmaPoints();
-  void Update(const MatrixXd& S, const MatrixXd& Zsig, const VectorXd& z, const VectorXd& z_pred, int n_z);
+  void NormalizeAnglesInState();
 
 
   };
