@@ -35,11 +35,11 @@ UKF::UKF() {
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   // TODO Tune this parameter
-  std_a_ = 30;
+  std_a_ = 2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   // TODO Tune this parameter
-  std_yawdd_ = 30;
+  std_yawdd_ = M_PI / 2;
 
   //DO NOT MODIFY measurement noise values below these are provided by the sensor manufacturer.
   // Laser measurement noise standard deviation position1 in m
@@ -149,9 +149,10 @@ void UKF::Prediction(double delta_t) {
   */
 
   MatrixXd Xsig_aug = GenerateSigmaPoints();
-  PredictSigmaPoints(Xsig_aug, delta_t);
+  PredictSigmaPoints(Xsig_aug, delta_t); // fills Xsig_pred_
 
   MeanCovFromSigmaPoints();
+  MeanCovFromSigmaPoints(); // estimates x_, P_ from Xsig_pred_
 
 }
 
@@ -173,11 +174,10 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
 
   VectorXd y = meas_package.raw_measurements_ - z_pred;
 
-  //NormalizeAngle(&y, 1);
-  y(1) = normalize_phi(y(1));
+  //y(1) = normalize_phi(y(1)); // new: no need to normalize in the LIDAR case
 
   MatrixXd Ht = H_lidar_.transpose();
-  MatrixXd R{2, 2};
+  MatrixXd R{2, 2};s
   R.fill(0.0);
   R(0, 0) = std_laspx_ * std_laspx_;
   R(1, 1) = std_laspy_ * std_laspy_;
@@ -258,7 +258,6 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd diff = Zsig.col(i) - z_pred;
-    //NormalizeAngle(&diff, 1);
     diff(1) = normalize_phi(diff(1));
 
     S += weights_(i) * (diff * diff.transpose());
@@ -310,7 +309,7 @@ MatrixXd UKF::GenerateSigmaPoints() {
 
 }
 
-void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) { // modifies Xsig_pred_
+void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) {
 
   VectorXd Delta{n_x_};
   VectorXd Noise{n_x_};
@@ -372,8 +371,9 @@ void UKF::MeanCovFromSigmaPoints() {
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd mean_diff = Xsig_pred_.col(i) - x_;
-    //NormalizeAngle(&mean_diff, 3);
+
     mean_diff(3) = normalize_phi(mean_diff(3));
+    mean_diff(4) = normalize_phi(mean_diff(4)); // new: yaw rate is also an angle
 
     P_ += weights_(i) * (mean_diff * mean_diff.transpose());
   }
@@ -392,11 +392,10 @@ void UKF::Update(const MatrixXd& S, const MatrixXd& Zsig, const VectorXd& z, con
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd diff_x = Xsig_pred_.col(i) - x_;
-    //NormalizeAngle(&diff_x, 3); // new
     diff_x(3) = normalize_phi(diff_x(3));
+    diff_x(4) = normalize_phi(diff_x(4)); // new: yaw rate is also an angle
 
     VectorXd diff_z = Zsig.col(i) - z_pred;
-    //NormalizeAngle(&diff_z, 1);
     diff_z(1) = normalize_phi(diff_z(1));
 
     Tc += weights_(i) * diff_x * diff_z.transpose();
