@@ -174,10 +174,8 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
 
   VectorXd y = meas_package.raw_measurements_ - z_pred;
 
-  //y(1) = normalize_phi(y(1)); // new: no need to normalize in the LIDAR case
-
   MatrixXd Ht = H_lidar_.transpose();
-  MatrixXd R{2, 2};s
+  MatrixXd R{2, 2};
   R.fill(0.0);
   R(0, 0) = std_laspx_ * std_laspx_;
   R(1, 1) = std_laspy_ * std_laspy_;
@@ -258,14 +256,40 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
 
     VectorXd diff = Zsig.col(i) - z_pred;
-    diff(1) = normalize_phi(diff(1));
+    diff(1) = normalize_angle(diff(1));
 
     S += weights_(i) * (diff * diff.transpose());
   }
 
   S += R;
 
-  Update(S, Zsig, meas_package.raw_measurements_, z_pred, n_z);
+  // Cross correlation matrix
+
+  MatrixXd Tc = MatrixXd(n_x_, n_z);
+
+  //calculate cross correlation matrix
+
+  Tc.fill(0.0);
+  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
+
+    VectorXd diff_x = Xsig_pred_.col(i) - x_;
+    diff_x(3) = normalize_angle(diff_x(3)); // yaw
+    diff_x(4) = normalize_angle(diff_x(4)); // yaw rate
+
+    VectorXd diff_z = Zsig.col(i) - z_pred;
+    diff_z(1) = normalize_angle(diff_z(1)); // radar phi
+
+    Tc += weights_(i) * diff_x * diff_z.transpose();
+  }
+
+  // Kalman gain
+
+  MatrixXd K = Tc * S.inverse();
+
+  // Update state mean and covariance matrix
+
+  x_ += K * (meas_package.raw_measurements_ - z_pred);
+  P_ -= K * S * K.transpose();
 
 }
 
@@ -372,59 +396,16 @@ void UKF::MeanCovFromSigmaPoints() {
 
     VectorXd mean_diff = Xsig_pred_.col(i) - x_;
 
-    mean_diff(3) = normalize_phi(mean_diff(3));
-    mean_diff(4) = normalize_phi(mean_diff(4)); // new: yaw rate is also an angle
+    mean_diff(3) = normalize_angle(mean_diff(3)); // yaw
+    mean_diff(4) = normalize_angle(mean_diff(4)); // yaw rate
 
     P_ += weights_(i) * (mean_diff * mean_diff.transpose());
   }
 
 }
 
-void UKF::Update(const MatrixXd& S, const MatrixXd& Zsig, const VectorXd& z, const VectorXd& z_pred, int n_z) {
 
-  // Cross correlation matrix
-
-  MatrixXd Tc = MatrixXd(n_x_, n_z);
-
-  //calculate cross correlation matrix
-
-  Tc.fill(0.0);
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-
-    VectorXd diff_x = Xsig_pred_.col(i) - x_;
-    diff_x(3) = normalize_phi(diff_x(3));
-    diff_x(4) = normalize_phi(diff_x(4)); // new: yaw rate is also an angle
-
-    VectorXd diff_z = Zsig.col(i) - z_pred;
-    diff_z(1) = normalize_phi(diff_z(1));
-
-    Tc += weights_(i) * diff_x * diff_z.transpose();
-  }
-
-  // Kalman gain
-
-  MatrixXd K = Tc * S.inverse();
-
-  // Update state mean and covariance matrix
-
-  x_ += K * (z - z_pred);
-  P_ -= K * S * K.transpose();
-
-}
-
-void NormalizeAngle(VectorXd* p_vec, int idx) {
-
-  double x = (*p_vec)(idx);
-
-  while (x >  M_PI) x -= 2.*M_PI;
-  while (x < -M_PI) x += 2.*M_PI;
-
-  (*p_vec)(idx) = x;
-
-}
-
-
-double normalize_phi(double phi) {
+double normalize_angle(double phi) {
 
   if ((phi > -M_PI) && (phi < M_PI)) {
     return phi;
