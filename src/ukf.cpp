@@ -310,7 +310,10 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
 
   // Update state mean and covariance matrix
 
-  x_ += K * (meas_package.raw_measurements_ - z_pred);
+  VectorXd y = meas_package.raw_measurements_ - z_pred;
+  y(1) = normalize_angle(y(1)); // radar phi
+
+  x_ += K * y;
   P_ -= K * S * K.transpose();
 
 }
