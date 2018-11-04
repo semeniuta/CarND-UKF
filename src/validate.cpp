@@ -102,14 +102,15 @@ int main() {
   for (int i = 0; i < n; i++) {
 
     cout << "=== (" << i << ") =========================\n";
-    cout << "x_GT = \n" << ground_truth[i] << "\n";
 
     tracking.ProcessMeasurement(measurement_pack_list[i]);
 
+    cout << "x_GT = \n" << ground_truth[i] << "\n";
+
     //cout << "x_CTRV = \n" << tracking.x_ << "\n";
 
-    //VectorXd x_hat = tools.CTRVTransform(tracking.x_);
-    //cout << "x_hat = \n" << tracking.x_ << "\n";
+    VectorXd x_hat = tools.CTRVTransform(tracking.x_);
+    cout << "x_hat = \n" << x_hat << "\n";
 
     estimations.push_back(tracking.x_);
 
