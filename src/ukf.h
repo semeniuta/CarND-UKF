@@ -108,10 +108,6 @@ private:
   long long previous_timestamp_;
   MatrixXd H_lidar_;
 
-  void InitWeights();
-  MatrixXd GenerateSigmaPoints();
-  void PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t);
-  void MeanCovFromSigmaPoints();
   void NormalizeAnglesInState();
 
 
