@@ -62,8 +62,7 @@ UKF::UKF() {
 
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
-  weights_ = VectorXd(2 * n_aug_ + 1);
-  InitWeights();
+  weights_ = init_weights(n_aug_, lambda_);
 
   H_lidar_ = MatrixXd{2, 5};
   H_lidar_ << 1, 0, 0, 0, 0,
@@ -171,11 +170,11 @@ void UKF::Prediction(double delta_t) {
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
 
-  MatrixXd Xsig_aug = GenerateSigmaPoints();
-  PredictSigmaPoints(Xsig_aug, delta_t); // fills Xsig_pred_
+  MatrixXd Xsig_aug = generate_sigma_points(x_, P_, std_a_, std_yawdd_, lambda_);
 
-  MeanCovFromSigmaPoints();
-  MeanCovFromSigmaPoints(); // estimates x_, P_ from Xsig_pred_
+  Xsig_pred_ = predict_sigma_points(Xsig_aug, delta_t);
+
+  mean_cov_from_sigma_points(&x_, &P_, Xsig_pred_, weights_);
 
 }
 
@@ -205,8 +204,6 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
 
   MatrixXd S = H_lidar_ * P_ * Ht + R;
 
-  // TODO Given PHt (Tc), the latter parts should be common
-
   MatrixXd PHt = P_ * Ht;
   MatrixXd K = PHt * S.inverse();
 
@@ -230,205 +227,19 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   You'll also need to calculate the radar NIS.
   */
 
-  int n_z = 3; // r, phi, r_dot
-
-  MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
-
-  // Mean predicted measurement
-  VectorXd z_pred = VectorXd(n_z);
-
-  // Measurement covariance matrix S
-  MatrixXd S = MatrixXd(n_z, n_z);
-
-  // Transform sigma points into measurement space
-
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-
-    double px = Xsig_pred_(0, i);
-    double py = Xsig_pred_(1, i);
-    double v = Xsig_pred_(2, i);
-    double yaw = Xsig_pred_(3, i);
-
-    double rho = sqrt( px * px + py * py );
-    double phi = atan2(py, px);
-    double rhod = (px * cos(yaw) * v + py * sin(yaw) * v) / rho;
-
-    Zsig(0, i) = rho;
-    Zsig(1, i) = phi;
-    Zsig(2, i) = rhod;
-
-  }
-
-  // Calculate mean predicted measurement
-
-  z_pred.fill(0.0);
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-
-    z_pred += weights_(i) * Zsig.col(i);
-  }
-
-  // Calculate innovation covariance matrix S
-
-  MatrixXd R{3, 3};
-  R.fill(0.0);
-  R(0, 0) = std_radr_ * std_radr_;
-  R(1, 1) = std_radphi_ * std_radphi_;
-  R(2, 2) = std_radrd_ * std_radrd_;
-
-  S.fill(0.0);
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-
-    VectorXd diff = Zsig.col(i) - z_pred;
-    diff(1) = normalize_angle(diff(1));
-
-    S += weights_(i) * (diff * diff.transpose());
-  }
-
-  S += R;
-
-  // Cross correlation matrix
-
-  MatrixXd Tc = MatrixXd(n_x_, n_z);
-
-  //calculate cross correlation matrix
-
-  Tc.fill(0.0);
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-
-    VectorXd diff_x = Xsig_pred_.col(i) - x_;
-    diff_x(3) = normalize_angle(diff_x(3)); // yaw
-    diff_x(4) = normalize_angle(diff_x(4)); // yaw rate
-
-    VectorXd diff_z = Zsig.col(i) - z_pred;
-    diff_z(1) = normalize_angle(diff_z(1)); // radar phi
-
-    Tc += weights_(i) * diff_x * diff_z.transpose();
-  }
-
-  // Kalman gain
-
-  MatrixXd K = Tc * S.inverse();
-
-  // Update state mean and covariance matrix
-
-  VectorXd y = meas_package.raw_measurements_ - z_pred;
-  y(1) = normalize_angle(y(1)); // radar phi
-
-  x_ += K * y;
-  P_ -= K * S * K.transpose();
+  update_radar(
+      &x_,
+      &P_,
+      meas_package.raw_measurements_,
+      Xsig_pred_,
+      weights_,
+      std_radr_,
+      std_radphi_,
+      std_radrd_
+  );
 
 }
 
-void UKF::InitWeights() {
-
-  weights_(0) = lambda_ / (lambda_ + n_aug_);
-
-  double w_not_mean = 1 / (2 * (lambda_ + n_aug_));
-  for (unsigned int i = 1; i < 2 * n_aug_ + 1; i++) {
-    weights_(i) = w_not_mean;
-  }
-
-}
-
-MatrixXd UKF::GenerateSigmaPoints() {
-
-  VectorXd x_aug = VectorXd(n_aug_);
-  MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);
-  MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
-
-  x_aug.fill(0.);
-  x_aug.head(n_x_) = x_;
-
-  P_aug.topLeftCorner(n_x_, n_x_) = P_;
-  P_aug(n_x_, n_x_) = std_a_ * std_a_;
-  P_aug(n_x_ + 1, n_x_ + 1) = std_yawdd_ * std_yawdd_;
-
-  // Square root matrix of P_aug
-  MatrixXd A = P_aug.llt().matrixL();
-
-  double factor = sqrt(lambda_ + n_aug_);
-
-  Xsig_aug.col(0) = x_aug;
-
-  for (unsigned int i = 0; i < n_aug_; i++) {
-    Xsig_aug.col(1 + i) = x_aug + factor * A.col(i);
-    Xsig_aug.col(n_aug_ + 1 + i) = x_aug - factor * A.col(i);
-  }
-
-  return Xsig_aug;
-
-}
-
-void UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, double delta_t) {
-
-  VectorXd Delta{n_x_};
-  VectorXd Noise{n_x_};
-
-  for (unsigned int j = 0; j < 2 * n_aug_ + 1; j++) {
-
-    double v = Xsig_aug(2, j);
-    double psi = Xsig_aug(3, j);
-    double psi_dot = Xsig_aug(4, j);
-    double noise_a = Xsig_aug(5, j);
-    double noise_yawdd = Xsig_aug(6, j);
-
-    if (fabs(psi_dot) > 0.001) {
-
-      double ratio = v / psi_dot;
-      double psi_increase = psi_dot * delta_t;
-
-      Delta(0) = ratio * ( sin(psi + psi_increase) - sin(psi));
-      Delta(1) = ratio * (-cos(psi + psi_increase) + cos(psi));
-      Delta(2) = 0;
-      Delta(3) = psi_increase;
-      Delta(4) = 0;
-
-    } else { // psi_dot is close to 0
-
-      Delta(0) = v * cos(psi) * delta_t;
-      Delta(1) = v * sin(psi) * delta_t;
-      Delta(2) = 0;
-      Delta(3) = 0;
-      Delta(4) = 0;
-
-    }
-
-    double delta_t_sq = delta_t * delta_t;
-
-    Noise(0) = 0.5 * delta_t_sq * cos(psi) * noise_a;
-    Noise(1) = 0.5 * delta_t_sq * sin(psi) * noise_a;
-    Noise(2) = delta_t * noise_a;
-    Noise(3) = 0.5 * delta_t_sq * noise_yawdd;
-    Noise(4) = delta_t * noise_yawdd;
-
-    Xsig_pred_.col(j) = Xsig_aug.block(0, j, n_x_, 1) + Delta + Noise;
-
-  }
-}
-
-void UKF::MeanCovFromSigmaPoints() {
-
-  //predict state mean
-
-  x_.fill(0.0);
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-    x_ += weights_(i) * Xsig_pred_.col(i);
-  }
-
-  //predict state covariance matrix
-
-  P_.fill(0.0);
-  for (unsigned int i = 0; i < 2 * n_aug_ + 1; i++) {
-
-    VectorXd mean_diff = Xsig_pred_.col(i) - x_;
-
-    mean_diff(3) = normalize_angle(mean_diff(3)); // yaw
-    mean_diff(4) = normalize_angle(mean_diff(4)); // yaw rate
-
-    P_ += weights_(i) * (mean_diff * mean_diff.transpose());
-  }
-
-}
 
 void UKF::NormalizeAnglesInState() {
 
