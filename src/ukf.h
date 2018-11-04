@@ -10,8 +10,6 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-double normalize_angle(double phi);
-
 class UKF {
 public:
 

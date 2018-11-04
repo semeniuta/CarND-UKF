@@ -1,4 +1,5 @@
 #include "ukf.h"
+#include "ukf_funcs.h"
 #include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
@@ -435,30 +436,3 @@ void UKF::NormalizeAnglesInState() {
   x_(4) = normalize_angle(x_(4)); // yaw rate
 
 }
-
-
-double normalize_angle(double phi) {
-
-  if ((phi > -M_PI) && (phi < M_PI)) {
-    return phi;
-  }
-
-  double TWO_PI = 2 * M_PI;
-  double n_twopies = (abs(phi) - M_PI) / TWO_PI;
-
-  double phi_norm;
-
-  if (phi < -M_PI) {
-
-    phi_norm = phi + ceil(n_twopies) * TWO_PI;
-
-  } else  { // phi > M_PI
-
-    phi_norm = phi - ceil(n_twopies) * TWO_PI;
-
-  }
-
-  return phi_norm;
-
-}
-
