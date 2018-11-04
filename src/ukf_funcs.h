@@ -31,6 +31,8 @@ MatrixXd predict_sigma_points(const MatrixXd& Xsig_aug, double delta_t);
 
 void mean_cov_from_sigma_points(VectorXd* x, MatrixXd* P, const MatrixXd& Xsig_pred, const VectorXd& weights);
 
+VectorXd init_weights(int n_aug, double lambda);
+
 
 
 

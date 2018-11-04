@@ -248,3 +248,18 @@ void mean_cov_from_sigma_points(VectorXd* x, MatrixXd* P, const MatrixXd& Xsig_p
   }
 
 }
+
+VectorXd init_weights(int n_aug, double lambda) {
+
+  VectorXd weights{2 * n_aug + 1};
+
+  weights(0) = lambda / (lambda + n_aug);
+
+  double w_not_mean = 1 / (2 * (lambda + n_aug));
+  for (unsigned int i = 1; i < 2 * n_aug + 1; i++) {
+    weights(i) = w_not_mean;
+  }
+
+  return weights;
+
+}
