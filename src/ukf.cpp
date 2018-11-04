@@ -37,11 +37,11 @@ UKF::UKF() {
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   // TODO Tune this parameter
-  std_a_ = 2;
+  std_a_ = 2.;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   // TODO Tune this parameter
-  std_yawdd_ = M_PI / 2;
+  std_yawdd_ = 0.5;
 
   //DO NOT MODIFY measurement noise values below these are provided by the sensor manufacturer.
   // Laser measurement noise standard deviation position1 in m
@@ -108,9 +108,9 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
     P_.fill(0.);
     P_(0, 0) = 1;
     P_(1, 1) = 1;
-    P_(2, 2) = 1000;
-    P_(3, 3) = 1000;
-    P_(4, 4) = 1000;
+    P_(2, 2) = 10;
+    P_(3, 3) = 10;
+    P_(4, 4) = 10;
 
     x_hat = tools.CTRVTransform(x_);
     cout << "x_hat (init) = \n" << x_hat << "\n";
