@@ -26,3 +26,6 @@ target_link_libraries(UnscentedKF z ssl uv uWS)
 
 add_executable(validate src/validate.cpp ${core_sources})
 target_link_libraries(validate z ssl uv uWS)
+
+add_executable(test src/test.cpp ${core_sources})
+target_link_libraries(test z ssl uv uWS)
