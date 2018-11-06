@@ -121,7 +121,7 @@ int main() {
     VectorXd x_hat = tools.CTRVTransform(tracking.x_);
     cout << "x_hat = \n" << x_hat << "\n";
 
-    estimations.push_back(tracking.x_);
+    estimations.push_back(x_hat);
 
   }
 

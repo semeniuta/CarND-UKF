@@ -24,9 +24,9 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd>& estimations,
 
   unsigned long n = estimations.size();
 
-  for(int i = 0; i < n; i++){
+  for (int i = 0; i < n; i++){
 
-    VectorXd x_hat = CTRVTransform(estimations[i]);
+    VectorXd x_hat = estimations[i];
     VectorXd x_true = ground_truth[i];
 
     VectorXd diff = x_hat - x_true;
