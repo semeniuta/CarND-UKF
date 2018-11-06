@@ -105,9 +105,11 @@ int main() {
 
     tracking.ProcessMeasurement(measurement_pack_list[i]);
 
-    cout << "x_GT = \n" << ground_truth[i] << "\n";
+    cout << "NIS = " << tracking.nis_ << "\n";
 
-    //cout << "x_CTRV = \n" << tracking.x_ << "\n";
+    cout << "x_CTRV = \n" << tracking.x_ << "\n";
+
+    cout << "x_GT = \n" << ground_truth[i] << "\n";
 
     VectorXd x_hat = tools.CTRVTransform(tracking.x_);
     cout << "x_hat = \n" << x_hat << "\n";

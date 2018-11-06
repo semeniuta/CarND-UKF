@@ -1,6 +1,5 @@
 #include "ukf.h"
 #include "ukf_funcs.h"
-#include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
 
@@ -82,9 +81,6 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
   measurements.
   */
 
-  Tools tools;
-  VectorXd x_hat;
-
   if (!is_initialized_) {
 
     previous_timestamp_ = meas_package.timestamp_;
@@ -112,9 +108,6 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
     P_(3, 3) = 10;
     P_(4, 4) = 10;
 
-    x_hat = tools.CTRVTransform(x_);
-    cout << "x_hat (init) = \n" << x_hat << "\n";
-
     is_initialized_ = true;
 
     return;
@@ -126,15 +119,9 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
   Prediction(dt);
   NormalizeAnglesInState();
 
-  cout << "x_CTRV (after prediction) = \n" << x_ << "\n";
-  x_hat = tools.CTRVTransform(x_);
-  cout << "x_hat (predict) = \n" << x_hat << "\n";
-
   switch (meas_package.sensor_type_) {
 
     case MeasurementPackage::RADAR:
-
-      std::cout << "Updating (RADAR)\n";
 
       // TODO Maybe data members preparation
       UpdateRadar(meas_package);
@@ -142,17 +129,12 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
 
     case MeasurementPackage::LASER:
 
-      std::cout << "Updating (LIDAR)\n";
-
       // TODO Maybe data members preparation
       UpdateLidar(meas_package);
       break;
   }
 
   NormalizeAnglesInState();
-
-  cout << "x_CTRV (after update) = \n" << x_ << "\n";
-  cout << "P (after update) = \n" << P_ << "\n";
 
 }
 
@@ -191,7 +173,7 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
   You'll also need to calculate the lidar NIS.
   */
 
-  double nis = update_lidar(
+  nis_ = update_lidar(
       &x_,
       &P_,
       meas_package.raw_measurements_,
@@ -199,8 +181,6 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
       std_laspx_,
       std_laspy_
   );
-
-  std::cout << "NIS_lidar = " << nis << "\n";
 
 }
 
@@ -218,7 +198,7 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   You'll also need to calculate the radar NIS.
   */
 
-  double nis = update_radar(
+  nis_ = update_radar(
       &x_,
       &P_,
       meas_package.raw_measurements_,
@@ -229,20 +209,10 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
       std_radrd_
   );
 
-  std::cout << "NIS_radar = " << nis << "\n";
-
 }
 
 
 void UKF::NormalizeAnglesInState() {
-
-  if ((x_(3) <= -M_PI) || (x_(3) >= M_PI)) {
-    std::cout << "yaw outside of range" << x_(3) << "\n";
-  }
-
-  if ((x_(4) <= -M_PI) || (x_(4) >= M_PI)) {
-    std::cout << "yawdd outside of range" << x_(4) << "\n";
-  }
 
   x_(3) = normalize_angle(x_(3)); // yaw
   x_(4) = normalize_angle(x_(4)); // yaw rate

@@ -1,5 +1,4 @@
 #include "ukf_funcs.h"
-#include <iostream>
 
 
 double normalize_angle(double phi) {
@@ -208,9 +207,6 @@ MatrixXd generate_sigma_points(
     Xsig_aug.col(n_aug + 1 + i) = x_aug - factor * A.col(i);
   }
 
-  std::cout << "Sigma points: \n" << Xsig_aug << "\n";
-  std::cout << "P_aug: \n" << P_aug << "\n";
-
   return Xsig_aug;
 
 }
@@ -238,9 +234,6 @@ MatrixXd predict_sigma_points(const MatrixXd& Xsig_aug, double delta_t) {
     if (fabs(psi_dot) > 0.001) {
 
       double ratio = v / psi_dot;
-
-      std::cout << "RATIO = " << ratio << "\n";
-      std::cout << "fabs(psi_dot) = " << fabs(psi_dot) << "\n";
 
       double psi_increase = psi_dot * delta_t;
 
