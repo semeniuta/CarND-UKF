@@ -98,6 +98,9 @@ int main() {
   string fname = "../data/obj_pose-laser-radar-synthetic-input.txt";
   readData(fname, measurement_pack_list, ground_truth);
 
+  unsigned int n_nis_over = 0;
+  const double NIS_95 = 0.352;
+
   auto n = measurement_pack_list.size();
   for (int i = 0; i < n; i++) {
 
@@ -106,6 +109,10 @@ int main() {
     tracking.ProcessMeasurement(measurement_pack_list[i]);
 
     cout << "NIS = " << tracking.nis_ << "\n";
+
+    if (tracking.nis_ > NIS_95) {
+      n_nis_over++;
+    }
 
     cout << "x_CTRV = \n" << tracking.x_ << "\n";
 
@@ -120,6 +127,8 @@ int main() {
 
   VectorXd rmse = tools.CalculateRMSE(estimations, ground_truth);
   cout << "RMSE:\n" << rmse << "\n";
+
+  cout << "NIS ratio: " << (double)n_nis_over / (double)n << "\n";
 
   return 0;
 
