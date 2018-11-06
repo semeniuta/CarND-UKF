@@ -37,11 +37,11 @@ UKF::UKF() {
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   // TODO Tune this parameter
-  std_a_ = 0.1;
+  std_a_ = 8.;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   // TODO Tune this parameter
-  std_yawdd_ = 0.05;
+  std_yawdd_ = 5.;
 
   //DO NOT MODIFY measurement noise values below these are provided by the sensor manufacturer.
   // Laser measurement noise standard deviation position1 in m
@@ -149,11 +149,10 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
       break;
   }
 
-  //NormalizeAnglesInState();
+  NormalizeAnglesInState();
 
-  //cout << "x_CTRV (after update) = \n" << x_ << "\n";
-  //x_hat = tools.CTRVTransform(x_);
-  //cout << "x_hat (update) = \n" << x_hat << "\n";
+  cout << "x_CTRV (after update) = \n" << x_ << "\n";
+  cout << "P (after update) = \n" << P_ << "\n";
 
 }
 
@@ -238,11 +237,11 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
 void UKF::NormalizeAnglesInState() {
 
   if ((x_(3) <= -M_PI) || (x_(3) >= M_PI)) {
-    std::cout << "yaw outside of range\n";
+    std::cout << "yaw outside of range" << x_(3) << "\n";
   }
 
   if ((x_(4) <= -M_PI) || (x_(4) >= M_PI)) {
-    std::cout << "yawdd outside of range\n";
+    std::cout << "yawdd outside of range" << x_(4) << "\n";
   }
 
   x_(3) = normalize_angle(x_(3)); // yaw
