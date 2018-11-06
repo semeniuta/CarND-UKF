@@ -192,24 +192,16 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
   You'll also need to calculate the lidar NIS.
   */
 
-  VectorXd z_pred = H_lidar_ * x_;
+  double nis = update_lidar(
+      &x_,
+      &P_,
+      meas_package.raw_measurements_,
+      H_lidar_,
+      std_laspx_,
+      std_laspy_
+  );
 
-  VectorXd y = meas_package.raw_measurements_ - z_pred;
-
-  MatrixXd Ht = H_lidar_.transpose();
-  MatrixXd R{2, 2};
-  R.fill(0.0);
-  R(0, 0) = std_laspx_ * std_laspx_;
-  R(1, 1) = std_laspy_ * std_laspy_;
-
-  MatrixXd S = H_lidar_ * P_ * Ht + R;
-
-  MatrixXd PHt = P_ * Ht;
-  MatrixXd K = PHt * S.inverse();
-
-  x_ = x_ + (K * y);
-  MatrixXd I = MatrixXd::Identity(n_x_, n_x_);
-  P_ = (I - K * H_lidar_) * P_;
+  std::cout << "NIS_lidar = " << nis << "\n";
 
 }
 
@@ -227,7 +219,7 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
   You'll also need to calculate the radar NIS.
   */
 
-  update_radar(
+  double nis = update_radar(
       &x_,
       &P_,
       meas_package.raw_measurements_,
@@ -237,6 +229,8 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
       std_radphi_,
       std_radrd_
   );
+
+  std::cout << "NIS_radar = " << nis << "\n";
 
 }
 

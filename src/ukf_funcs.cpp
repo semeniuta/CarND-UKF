@@ -27,7 +27,7 @@ double normalize_angle(double phi) {
 }
 
 
-void update_radar(
+double update_radar(
     VectorXd* x,
     MatrixXd* P,
     const VectorXd& z,
@@ -127,7 +127,48 @@ void update_radar(
   *x = *x + K * y;
   *P = *P - K * S * K.transpose();
 
+  double nis = y.transpose() * S.inverse() * y;
+  return nis;
+
 }
+
+
+double update_lidar(
+    VectorXd* x,
+    MatrixXd* P,
+    const VectorXd& z,
+    const MatrixXd& H_lidar,
+    double std_laspx,
+    double std_laspy
+    ) {
+
+  long n_x = x->size();
+
+  VectorXd z_pred = H_lidar * (*x);
+
+  VectorXd y = z - z_pred;
+
+  MatrixXd Ht = H_lidar.transpose();
+  MatrixXd R{2, 2};
+  R.fill(0.0);
+  R(0, 0) = std_laspx * std_laspx;
+  R(1, 1) = std_laspy * std_laspy;
+
+  MatrixXd S = H_lidar * (*P) * Ht + R;
+  MatrixXd Sinv = S.inverse();
+
+  MatrixXd PHt = (*P) * Ht;
+  MatrixXd K = PHt * Sinv;
+
+  *x = *x + (K * y);
+  MatrixXd I = MatrixXd::Identity(n_x, n_x);
+  *P = (I - K * H_lidar) * (*P);
+
+  double nis = y.transpose() * Sinv * y;
+  return nis;
+
+}
+
 
 MatrixXd generate_sigma_points(
     const VectorXd& x,
@@ -223,6 +264,7 @@ MatrixXd predict_sigma_points(const MatrixXd& Xsig_aug, double delta_t) {
 
 }
 
+
 void mean_cov_from_sigma_points(VectorXd* x, MatrixXd* P, const MatrixXd& Xsig_pred, const VectorXd& weights) {
 
   //predict state mean
@@ -248,6 +290,7 @@ void mean_cov_from_sigma_points(VectorXd* x, MatrixXd* P, const MatrixXd& Xsig_p
   }
 
 }
+
 
 VectorXd init_weights(int n_aug, double lambda) {
 

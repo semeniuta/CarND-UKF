@@ -8,7 +8,7 @@ using Eigen::VectorXd;
 
 double normalize_angle(double phi);
 
-void update_radar(
+double update_radar(
     VectorXd* x,
     MatrixXd* P,
     const VectorXd& z,
@@ -17,6 +17,15 @@ void update_radar(
     double std_r,
     double std_phi,
     double std_rd
+);
+
+double update_lidar(
+    VectorXd* x,
+    MatrixXd* P,
+    const VectorXd& z,
+    const MatrixXd& H_lidar,
+    double std_laspx,
+    double std_laspy
 );
 
 MatrixXd generate_sigma_points(
