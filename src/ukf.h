@@ -11,6 +11,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 class UKF {
+
 public:
 
   ///* initially set to false, set to true in first call of ProcessMeasurement
@@ -70,7 +71,6 @@ public:
   ///* Normalized innovation squared (NIS)
   double nis_;
 
-
   /**
    * Constructor
    */
@@ -114,6 +114,6 @@ private:
   void NormalizeAnglesInState();
 
 
-  };
+};
 
 #endif /* UKF_H */

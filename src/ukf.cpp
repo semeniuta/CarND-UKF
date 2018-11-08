@@ -10,17 +10,10 @@ using std::vector;
 
 /**
  * Initializes Unscented Kalman filter
- * This is scaffolding, do not modify
  */
 UKF::UKF() {
 
   is_initialized_ = false;
-
-  // if this is false, laser measurements will be ignored (except during init)
-  use_laser_ = true;
-
-  // if this is false, radar measurements will be ignored (except during init)
-  use_radar_ = true;
 
   n_x_ = 5;
 
@@ -74,12 +67,6 @@ UKF::UKF() {
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Make sure you switch between lidar and radar
-  measurements.
-  */
 
   if (!is_initialized_) {
 
@@ -123,13 +110,11 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
 
     case MeasurementPackage::RADAR:
 
-      // TODO Maybe data members preparation
       UpdateRadar(meas_package);
       break;
 
     case MeasurementPackage::LASER:
 
-      // TODO Maybe data members preparation
       UpdateLidar(meas_package);
       break;
   }
@@ -144,12 +129,6 @@ void UKF::ProcessMeasurement(const MeasurementPackage& meas_package) {
  * measurement and this one.
  */
 void UKF::Prediction(double delta_t) {
-  /**
-  TODO:
-
-  Complete this function! Estimate the object's location. Modify the state
-  vector, x_. Predict sigma points, the state, and the state covariance matrix.
-  */
 
   MatrixXd Xsig_aug = generate_sigma_points(x_, P_, std_a_, std_yawdd_, lambda_);
 
@@ -164,14 +143,6 @@ void UKF::Prediction(double delta_t) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Use lidar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the lidar NIS.
-  */
 
   nis_ = update_lidar(
       &x_,
@@ -189,14 +160,6 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Use radar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the radar NIS.
-  */
 
   nis_ = update_radar(
       &x_,
